@@ -7,6 +7,7 @@
 #include <iostream>
 ros::Publisher hand_publisher;
 trajectory_msgs::JointTrajectory hand_msg;
+geometry_msgs::Point sim_vel; 
 
 int controller_type = 0;
 int mat_limits[] {-100,100};
@@ -58,6 +59,12 @@ void position_control(const geometry_msgs::Point& msg) {
 	set_new_position(robot_position, 1, 0);
 };
 
+void velocity_control(const geometry_msgs::Point& msg) {
+	// 0 = open, 1 = closed
+	// parameters: id, max_repeats, get positions, get_currents, get_distinct packages, get_commands
+	// get_measurements call here
+};
+
 void mat_callback(const geometry_msgs::Point& msg) {
 	// send position control messages
 	if (controller_type == 0) {
@@ -71,11 +78,27 @@ void mat_callback(const geometry_msgs::Point& msg) {
 };
 
 void change_control_mode(const std_msgs::String& msg) {
-
+	if (controller_type == 0) {
+		controller_type = 1;
+	} 
+	else {
+		controller_type = 0;
+	}
 };
 
 void keyboard_callback(const std_msgs::String& msg){
+	var = msg.data[0];
 
+	if (var == "1") {
+		sim_vel.y += 2;
+		std::cout << sim_vel.y;
+		velocity_control(sim_vel);
+	}
+	else if (var == "0") {
+		sim_vel.y -= 2;
+		std::cout << sim.vel.y;
+		velocity_control(sim_vel);
+	}
 };
 
 
@@ -87,6 +110,10 @@ void message_init(){
 	point.accelerations.push_back(0);
 	point.effort.push_back(0);
 	point.time_from_start = ros::Duration(10,0);
+
+	sim_vel.x = 0;
+	sim_vel.y = 0;
+	sim_vel.z = 0;
 };
 
 int main(int argc, char **argv) {
