@@ -14,12 +14,59 @@ int qb_limits[] {0,1};
 int service_limits[] {0,19000};
 int velocity_signal_threshold[] {-2,2};
 
-
-void mat_callback(const geometry_msgs::Point& msg) {
-	if (controller_type == 0) {
+float transform_position(const int old_limits[], const int new_limits[], int old_position){
+	// if old position is over limits, change the value to be in the valid range
+	if (old_position < old_limits[0]){
+		old_position = old_limits[0];
+	}
+	else if (old_position > old_limits[1]){
+		old_position = old_limits[1];
 	}
 
+	int old_range = old_limits[1] - old_limits[0];
+	int new_range = new_limits[1] - old_limits[0];
+
+	float new_position = (((old_position - old_limits[0])*new_range)/old_range+new_limits[0]);
+
+	return new_position;
+};
+
+void set_new_position(const float position, const int duration_sec, const int duration_nsec) {
+	hand_msg.points[0].time_from_start.sec = duration_sec;
+	hand_msg.points[0].time_from_start.nsec = duration_nsec;
+	hand_msg.points[0].positions[0] = position;
+
+	hand_publisher.publish(hand_msg);
+};
+
+void position_control(const geometry_msgs::Point& msg) {
+	//set hand speed to fastest = 1 nsec
+	ros::Duration(0,1);
+
+	float robot_position = transform_position(mat_limits, qb_limits, msg.x);
+
+	// additional joint limits
+	if (robot_position > 0.95) {
+		robot_position = 0.95;
+	}
+	else if (robot_position < 0.05) {
+		robot_position = 0.05;
+	}
+
+
+	// what has happened here
+	set_new_position(robot_position, 1, 0);
+};
+
+void mat_callback(const geometry_msgs::Point& msg) {
+	// send position control messages
+	if (controller_type == 0) {
+		position_control(msg);
+	}
+
+	// send velocity control messages
 	else {
+		velocity_control(msg);
 	}
 };
 
@@ -30,6 +77,7 @@ void change_control_mode(const std_msgs::String& msg) {
 void keyboard_callback(const std_msgs::String& msg){
 
 };
+
 
 void message_init(){
 	hand_msg.joint_names.push_back("qbhand1_synergy_joint");
